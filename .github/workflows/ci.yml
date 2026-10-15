@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Rust checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Report missing Rust project
+        if: ${{ hashFiles('Cargo.toml') == '' }}
+        run: echo "No Cargo.toml yet. Rust checks will run when the CLI is added." >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        if: ${{ hashFiles('Cargo.toml') != '' }}
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Install D-Bus development files
+        if: ${{ hashFiles('Cargo.toml') != '' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes libdbus-1-dev pkg-config
+      - name: Check formatting
+        if: ${{ hashFiles('Cargo.toml') != '' }}
+        run: cargo fmt --check
+      - name: Check Clippy
+        if: ${{ hashFiles('Cargo.toml') != '' }}
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Test
+        if: ${{ hashFiles('Cargo.toml') != '' }}
+        run: cargo test --locked
