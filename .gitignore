@@ -1,0 +1,10 @@
+/target/
+__pycache__/
+*.py[cod]
+
+# Local measurements and diagnostic output are not project source.
+*.jsonl
+*.log
+*.raw
+*.stderr
+STATUS
